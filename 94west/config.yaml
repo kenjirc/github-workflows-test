@@ -1,0 +1,23 @@
+database:
+  clusterName: genpop-01
+  suffix: 6c4cd271
+
+cache:
+  clusterName: genpop-01
+  suffix: 686a2d65
+
+global:
+  domain: 94west.redcatcloud.com.au
+  image:
+    tag: 26.02.01
+  extraDomains:
+    - 94west.prodau01.redcatcloud.com.au    
+
+config:
+  s3TemplateBucket: "polygon-assets-customer-828909212654-prod-ap-southeast-2"
+  s3AssetBucket: "assets.redcatcloud.com.au"
+  s3PCAssetsDirectory: "static"
+  cloudfrontId: "E1IL8JWJKK85QS"
+
+taskServer:
+  enabled: True

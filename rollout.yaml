@@ -1,0 +1,11 @@
+prod-au01:
+  canary_range: "0-9"
+  full_range: "10-204"
+
+prod-eu01:
+  canary_range: "0-0"
+  full_range: "1-2"
+
+test-au01:
+  canary_range: "0-1"
+  full_range: "2-11"

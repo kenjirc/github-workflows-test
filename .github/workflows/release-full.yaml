@@ -1,0 +1,61 @@
+name: Release Full
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release version (e.g. 26.03.01)"
+        required: true
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - prod-au01
+          - prod-eu01
+          - test-au01
+
+jobs:
+  full:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get full range from rollout.yaml
+        id: range
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          range=$(yq ".[env(ENVIRONMENT)].full_range" rollout.yaml)
+          echo "full_range=$range" >> "$GITHUB_OUTPUT"
+
+      - name: Update image tags for remaining clients
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          TAG: ${{ inputs.tag }}
+          RANGE: ${{ steps.range.outputs.full_range }}
+        run: python scripts/updateImagetag.py "$ENVIRONMENT" "$RANGE" "$TAG"
+
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          TAG: ${{ inputs.tag }}
+          RANGE: ${{ steps.range.outputs.full_range }}
+        run: |
+          branch="release/${TAG}-full-${ENVIRONMENT}"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git checkout -b "$branch"
+          git add "$ENVIRONMENT"
+          git commit -m "release(${ENVIRONMENT}): full rollout ${TAG}"
+          git push -u origin "$branch"
+          gh pr create \
+            --title "Release ${TAG} full rollout - ${ENVIRONMENT}" \
+            --body "## Full Rollout
+
+          - **Environment:** ${ENVIRONMENT}
+          - **Tag:** ${TAG}
+          - **Range:** ${RANGE}
+
+          Merge this PR to deploy remaining clients."

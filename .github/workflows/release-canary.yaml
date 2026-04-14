@@ -1,0 +1,61 @@
+name: Release Canary
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release version (e.g. 26.03.01)"
+        required: true
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - prod-au01
+          - prod-eu01
+          - test-au01
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get canary range from rollout.yaml
+        id: range
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          range=$(yq ".[env(ENVIRONMENT)].canary_range" rollout.yaml)
+          echo "canary_range=$range" >> "$GITHUB_OUTPUT"
+
+      - name: Update image tags for canary clients
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          TAG: ${{ inputs.tag }}
+          RANGE: ${{ steps.range.outputs.canary_range }}
+        run: python scripts/updateImagetag.py "$ENVIRONMENT" "$RANGE" "$TAG"
+
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          TAG: ${{ inputs.tag }}
+          RANGE: ${{ steps.range.outputs.canary_range }}
+        run: |
+          branch="release/${TAG}-canary-${ENVIRONMENT}"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git checkout -b "$branch"
+          git add "$ENVIRONMENT"
+          git commit -m "release(${ENVIRONMENT}): canary ${TAG}"
+          git push -u origin "$branch"
+          gh pr create \
+            --title "Release ${TAG} canary - ${ENVIRONMENT}" \
+            --body "## Canary Release
+
+          - **Environment:** ${ENVIRONMENT}
+          - **Tag:** ${TAG}
+          - **Range:** ${RANGE}
+
+          Merge this PR to deploy canary clients. Once verified, run the **Release Full** workflow."
