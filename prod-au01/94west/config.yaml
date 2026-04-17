@@ -9,7 +9,7 @@ cache:
 global:
   domain: 94west.redcatcloud.com.au
   image:
-    tag: 26.02.01
+    tag: 26.04.01
   extraDomains:
     - 94west.prodau01.redcatcloud.com.au    
 
